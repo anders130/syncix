@@ -10,7 +10,6 @@ const versionLabels = Object.entries(versions ?? {}).map(
 
 const syncNvmrc = () => {
     if (nvmrc == null) {
-        logOk('.nvmrc (skipped)')
         return
     }
 
@@ -27,7 +26,6 @@ const syncNvmrc = () => {
 
 const syncPackageJson = () => {
     if (!packageJson || !Object.keys(packageJson).length) {
-        logOk('package.json (skipped)')
         return
     }
 
