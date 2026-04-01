@@ -1,0 +1,10 @@
+{
+    "name": "syncix",
+    "private": true,
+    "devDependencies": {
+        "prettier": "^3.8.1"
+    },
+    "scripts": {
+        "format": "prettier . --write"
+    }
+}
