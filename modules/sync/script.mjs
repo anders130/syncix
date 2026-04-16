@@ -3,7 +3,7 @@ import { spawnSync } from 'child_process'
 
 import { logHeader, logOk, logUpdate, change, flush } from './ui.mjs'
 
-const { versions, nvmrc, packageJson } = JSON.parse(process.argv[2])
+const { versions, nvmrc, packageJson, postSync } = JSON.parse(process.argv[2])
 const versionLabels = Object.entries(versions ?? {}).map(
     ([key, value]) => `${key} ${value}`,
 )
@@ -57,10 +57,11 @@ const syncPackageJson = () => {
     })
 
     fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
-    spawnSync('npm', ['install', '--package-lock-only', '--silent'], {
-        stdio: 'pipe',
-    })
-    logUpdate('package-lock.json')
+    if (postSync && postSync.length) {
+        const [bin, ...args] = postSync
+        spawnSync(bin, args, { stdio: 'pipe' })
+        logUpdate('lockfile')
+    }
 }
 
 logHeader('nix-sync', versionLabels)
