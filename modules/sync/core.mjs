@@ -9,13 +9,13 @@ export const nvmrc = (val) => {
         ? fs.readFileSync('.nvmrc', 'utf8').trim()
         : ''
 
-    if (cur === val) return { name: '.nvmrc', changed: false, log: () => {} }
+    if (cur === val) return { name: '.nvmrc', changed: false }
 
     return {
         name: '.nvmrc',
         changed: true,
         apply: () => fs.writeFileSync('.nvmrc', `${val}\n`),
-        log: () => logUpdate('.nvmrc', [change('.nvmrc', val)]),
+        log: () => logUpdate('.nvmrc', [change('node', val)]),
     }
 }
 
@@ -35,8 +35,7 @@ export const packageJson = (config) => {
             .map(([key, val]) => ({ section, key, val })),
     )
 
-    if (!diffs.length)
-        return { name: 'package.json', changed: false, log: () => {} }
+    if (!diffs.length) return { name: 'package.json', changed: false }
 
     const preview = () => {
         const next = JSON.parse(JSON.stringify(pkg))
@@ -60,41 +59,35 @@ export const packageJson = (config) => {
     }
 }
 
-export const command = (file, cmd, { pkgChanged, isCheck }) => {
-    if (!pkgChanged && !isCheck)
-        return { name: file, changed: false, log: () => {} }
-
-    if (isCheck) {
-        const { status } = spawnSync(cmd[0], cmd.slice(1), {
-            stdio: 'ignore',
-        })
-
-        return {
-            name: file,
-            changed: status !== 0,
-            log: () => logUpdate(file),
-        }
+export const command = (
+    file,
+    cmd,
+    { isCheck = false, pkgPreview = null } = {},
+) => {
+    let pkgOrig = null
+    if (pkgPreview != null) {
+        pkgOrig = fs.readFileSync('package.json')
+        fs.writeFileSync('package.json', pkgPreview)
     }
 
     const before = fs.existsSync(file) ? fs.readFileSync(file) : null
-
     const { status } = spawnSync(cmd[0], cmd.slice(1), {
-        stdio: 'pipe',
+        stdio: isCheck ? 'ignore' : 'pipe',
     })
-    if (status !== 0) process.exit(status ?? 1)
-
     const after = fs.existsSync(file) ? fs.readFileSync(file) : null
+
+    if (isCheck) {
+        if (before !== null) fs.writeFileSync(file, before)
+        else if (after !== null) fs.unlinkSync(file)
+        if (pkgOrig !== null) fs.writeFileSync('package.json', pkgOrig)
+    } else if (status !== 0) {
+        process.exit(status ?? 1)
+    }
 
     const changed =
         before === null
             ? after !== null
-            : after === null
-              ? true
-              : !before.equals(after)
+            : after === null || !before.equals(after)
 
-    return {
-        name: file,
-        changed,
-        log: () => logUpdate(file),
-    }
+    return { name: file, changed, log: () => logUpdate(file) }
 }

@@ -1,29 +1,22 @@
-const [green, yellow, cyan, reset, bold, dim] = [
-    '\x1b[32m',
-    '\x1b[33m',
-    '\x1b[36m',
-    '\x1b[0m',
-    '\x1b[1m',
-    '\x1b[2m',
-]
+const green = '\x1b[32m'
+const yellow = '\x1b[33m'
+const cyan = '\x1b[36m'
+const reset = '\x1b[0m'
+const bold = '\x1b[1m'
+const dim = '\x1b[2m'
 
-const [check, up, arrow, diamond, dot, branch, last, pipe] = [
-    '\u2713',
-    '\u2191',
-    '\u2192',
-    '\u25c6',
-    '\u00b7',
-    '\u251c\u2574',
-    '\u2514\u2574',
-    '\u2502',
-]
+const check = '\u2713'
+const up = '\u2191'
+const arrow = '\u2192'
+const diamond = '\u25c6'
+const dot = '\u00b7'
+const branch = '\u251c\u2574'
+const last = '\u2514\u2574'
+const pipe = '\u2502'
 
-const c = (color, text) => (color ? `${color}${text}${reset}` : text)
+const c = (color, text) => `${color}${text}${reset}`
 
 const lines = []
-
-const log = (color, icon, msg, children = []) =>
-    lines.push([color, icon, msg, children])
 
 const flush = () => {
     lines.forEach(([color, icon, msg, children], i) => {
@@ -47,8 +40,9 @@ const logHeader = (title, labels) => {
     process.stdout.write(`${c(bold, `${diamond} ${title}`)}${suffix}\n`)
 }
 
-const logOk = (msg) => log(green, check, msg)
-const logUpdate = (msg, children = []) => log(yellow, up, msg, children)
+const logOk = (msg) => lines.push([green, check, msg, []])
+const logUpdate = (msg, children = []) =>
+    lines.push([yellow, up, msg, children])
 const change = (key, value) => `${key} ${c(dim, arrow)} ${c(cyan, value)}`
 
 export { logHeader, logOk, logUpdate, change, flush }
