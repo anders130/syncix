@@ -6,6 +6,7 @@ const [green, yellow, cyan, reset, bold, dim] = [
     '\x1b[1m',
     '\x1b[2m',
 ]
+
 const [check, up, arrow, diamond, dot, branch, last, pipe] = [
     '\u2713',
     '\u2191',
@@ -17,26 +18,29 @@ const [check, up, arrow, diamond, dot, branch, last, pipe] = [
     '\u2502',
 ]
 
-const c = (color, text) => `${color}${text}${reset}`
+const c = (color, text) => (color ? `${color}${text}${reset}` : text)
 
 const lines = []
+
 const log = (color, icon, msg, children = []) =>
     lines.push([color, icon, msg, children])
 
-const flush = () =>
+const flush = () => {
     lines.forEach(([color, icon, msg, children], i) => {
         const isLast = i === lines.length - 1
-        const tree = isLast && !children.length ? last : branch
+        const tree = isLast ? last : branch
+
         process.stdout.write(`${c(dim, tree)}${c(color, icon)} ${msg}\n`)
 
         const childPrefix = isLast ? '  ' : `${c(dim, pipe)} `
-        children.forEach(([cc, ci, cm], j) => {
+        children.forEach((cm, j) => {
             const childTree = j < children.length - 1 ? branch : last
-            process.stdout.write(
-                `${childPrefix}${c(dim, childTree)}${c(cc, ci)} ${cm}\n`,
-            )
+            process.stdout.write(`${childPrefix}${c(dim, childTree)} ${cm}\n`)
         })
     })
+
+    lines.length = 0
+}
 
 const logHeader = (title, labels) => {
     const suffix = labels.length ? `  ${c(dim, labels.join(` ${dot} `))}` : ''
@@ -44,13 +48,7 @@ const logHeader = (title, labels) => {
 }
 
 const logOk = (msg) => log(green, check, msg)
-const logUpdate = (msg, children = []) =>
-    log(
-        yellow,
-        up,
-        msg,
-        children.map((child) => ['', '', child]),
-    )
+const logUpdate = (msg, children = []) => log(yellow, up, msg, children)
 const change = (key, value) => `${key} ${c(dim, arrow)} ${c(cyan, value)}`
 
 export { logHeader, logOk, logUpdate, change, flush }

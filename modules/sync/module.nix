@@ -24,10 +24,10 @@
                     default = {};
                     description = "Fields to sync into package.json, keyed by section";
                 };
-                postSync = mkOption {
-                    type = types.nullOr (types.listOf types.str);
-                    default = null;
-                    description = "Command to run after package.json sync (e.g. to update lockfile)";
+                commands = mkOption {
+                    type = types.attrsOf (types.listOf types.str);
+                    default = {};
+                    description = "Commands to run after sync, keyed by the file they update";
                 };
             };
 
@@ -37,8 +37,8 @@
                     runtimeInputs = [pkgs.nodejs];
                     text = ''
                         node ${./.}/script.mjs '${builtins.toJSON {
-                            inherit (config.sync) versions nvmrc packageJson postSync;
-                        }}'
+                            inherit (config.sync) versions nvmrc packageJson commands;
+                        }}' "$@"
                     '';
                 };
             };

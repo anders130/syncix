@@ -1,70 +1,52 @@
-import fs from 'fs'
-import { spawnSync } from 'child_process'
+import { logHeader, logOk, flush } from './ui.mjs'
+import * as core from './core.mjs'
 
-import { logHeader, logOk, logUpdate, change, flush } from './ui.mjs'
+const { versions, nvmrc, packageJson, commands } = JSON.parse(process.argv[2])
+const isCheck = process.argv.includes('--check')
 
-const { versions, nvmrc, packageJson, postSync } = JSON.parse(process.argv[2])
-const versionLabels = Object.entries(versions ?? {}).map(
-    ([key, value]) => `${key} ${value}`,
+logHeader(
+    'nix-sync',
+    Object.entries(versions ?? {}).map(([k, v]) => `${k} ${v}`),
 )
 
-const syncNvmrc = () => {
-    if (nvmrc == null) {
-        return
-    }
+const nvmTask = core.nvmrc(nvmrc)
+const pkgTask = core.packageJson(packageJson)
 
-    const current = fs.existsSync('.nvmrc')
-        ? fs.readFileSync('.nvmrc', 'utf8').trim()
-        : ''
-    if (current === nvmrc) {
-        logOk('.nvmrc')
-    } else {
-        logUpdate(change('.nvmrc', nvmrc))
-        fs.writeFileSync('.nvmrc', `${nvmrc}\n`)
-    }
+const baseTasks = [nvmTask, pkgTask].filter(Boolean)
+
+const pkgPreview =
+    isCheck && pkgTask?.changed && typeof pkgTask.preview === 'function'
+        ? pkgTask.preview()
+        : null
+
+const cmdTasks = Object.entries(commands ?? {}).map(([file, cmd]) =>
+    core.command(file, cmd, {
+        pkgChanged: !!pkgTask?.changed,
+        pkgPreview,
+        isCheck,
+    }),
+)
+
+const allTasks = [...baseTasks, ...cmdTasks]
+
+if (isCheck) {
+    allTasks.forEach((t) => (t.changed ? t.log() : logOk(t.name)))
+    flush()
+    process.exit(allTasks.some((t) => t.changed) ? 1 : 0)
 }
 
-const syncPackageJson = () => {
-    if (!packageJson || !Object.keys(packageJson).length) {
-        return
+allTasks.forEach((t) => {
+    if (!t.changed) return logOk(t.name)
+
+    try {
+        t.apply?.()
+    } catch (err) {
+        console.error(`✖ ${t.name} failed:`)
+        console.error(err)
+        process.exit(1)
     }
 
-    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+    t.log()
+})
 
-    const sections = Object.entries(packageJson)
-        .map(([section, fields]) => [
-            section,
-            Object.entries(fields).filter(
-                ([key, value]) => (pkg[section] ?? {})[key] !== value,
-            ),
-        ])
-        .filter(([, changed]) => changed.length)
-
-    if (!sections.length) {
-        logOk('package.json')
-        return
-    }
-
-    sections.forEach(([section, changed]) => {
-        changed.forEach(([key, value]) => {
-            pkg[section] ??= {}
-            pkg[section][key] = value
-        })
-        logUpdate(
-            section,
-            changed.map(([key, value]) => change(key, value)),
-        )
-    })
-
-    fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`)
-    if (postSync && postSync.length) {
-        const [bin, ...args] = postSync
-        spawnSync(bin, args, { stdio: 'pipe' })
-        logUpdate('lockfile')
-    }
-}
-
-logHeader('nix-sync', versionLabels)
-syncNvmrc()
-syncPackageJson()
 flush()

@@ -27,12 +27,12 @@ Example config:
       devDependencies."@types/node" =
         "^${lib.versions.major config.sync.versions.node}";
     };
-    postSync = ["npm" "install" "--package-lock-only" "--silent"];
+    commands."pnpm-lock.yaml" = ["pnpm" "install" "--lockfile-only" "--silent"];
   };
 }
 ```
 
-The `postSync` option allows providing a command to run after `package.json` is updated (e.g. to refresh lockfiles). This makes `syncix` package manager agnostic.
+The `commands` option allows providing a map of files to commands that should run after `package.json` is updated to ensure their consistency.
 
 Run:
 
