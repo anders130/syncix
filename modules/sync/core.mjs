@@ -64,17 +64,23 @@ export const command = (file, cmd, { pkgChanged, isCheck }) => {
     if (!pkgChanged && !isCheck)
         return { name: file, changed: false, log: () => {} }
 
-    const before = fs.existsSync(file) ? fs.readFileSync(file) : null
-
     if (isCheck) {
+        const { status } = spawnSync(cmd[0], cmd.slice(1), {
+            stdio: 'ignore',
+        })
+
         return {
             name: file,
-            changed: false,
+            changed: status !== 0,
             log: () => logUpdate(file),
         }
     }
 
-    const { status } = spawnSync(cmd[0], cmd.slice(1), { stdio: 'pipe' })
+    const before = fs.existsSync(file) ? fs.readFileSync(file) : null
+
+    const { status } = spawnSync(cmd[0], cmd.slice(1), {
+        stdio: 'pipe',
+    })
     if (status !== 0) process.exit(status ?? 1)
 
     const after = fs.existsSync(file) ? fs.readFileSync(file) : null
