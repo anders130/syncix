@@ -29,19 +29,28 @@ export const packageJson = (config) => {
 
     const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 
-    const diffs = Object.entries(config).flatMap(([section, fields]) =>
-        Object.entries(fields)
+    const diffs = Object.entries(config).flatMap(([section, fields]) => {
+        if (typeof fields === 'string') {
+            return pkg[section] !== fields
+                ? [{ section, key: null, val: fields }]
+                : []
+        }
+        return Object.entries(fields)
             .filter(([key, val]) => (pkg[section] ?? {})[key] !== val)
-            .map(([key, val]) => ({ section, key, val })),
-    )
+            .map(([key, val]) => ({ section, key, val }))
+    })
 
     if (!diffs.length) return { name: 'package.json', changed: false }
 
     const preview = () => {
         const next = JSON.parse(JSON.stringify(pkg))
         diffs.forEach(({ section, key, val }) => {
-            next[section] ??= {}
-            next[section][key] = val
+            if (key === null) {
+                next[section] = val
+            } else {
+                next[section] ??= {}
+                next[section][key] = val
+            }
         })
         return JSON.stringify(next, null, 2) + '\n'
     }
@@ -54,7 +63,9 @@ export const packageJson = (config) => {
         log: () =>
             logUpdate(
                 'package.json',
-                diffs.map(({ key, val }) => change(key, val)),
+                diffs.map(({ section, key, val }) =>
+                    change(key ?? section, val),
+                ),
             ),
     }
 }

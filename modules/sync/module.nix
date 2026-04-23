@@ -20,9 +20,9 @@
                     description = "Version to sync to .nvmrc, or null to skip";
                 };
                 packageJson = mkOption {
-                    type = types.attrsOf (types.attrsOf types.str);
+                    type = types.attrsOf (types.either types.str (types.attrsOf types.str));
                     default = {};
-                    description = "Fields to sync into package.json, keyed by section";
+                    description = "Fields to sync into package.json, keyed by section or top-level key";
                 };
                 commands = mkOption {
                     type = types.attrsOf (types.listOf types.str);
