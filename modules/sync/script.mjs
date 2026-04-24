@@ -2,10 +2,9 @@ import { spawnSync } from 'child_process'
 import { logHeader, logOk, flush } from './ui.mjs'
 import * as core from './core.mjs'
 
-const { versions, nvmrc, packageJson, renovateJson, format, commands } =
-    JSON.parse(process.argv[2])
+const { versions, write, generate, format } = JSON.parse(process.argv[2])
 const isCheck = process.argv.includes('--check')
-const cmds = Object.entries(commands ?? {})
+const cmds = Object.entries(generate ?? {})
 const fmt = format ?? []
 
 logHeader(
@@ -13,9 +12,9 @@ logHeader(
     Object.entries(versions ?? {}).map(([k, v]) => `${k} ${v}`),
 )
 
-const nvmTask = core.nvmrc(nvmrc)
-const pkgTask = core.packageJson(packageJson)
-const renovateTask = core.renovateJson(renovateJson)
+const nvmTask = core.nvmrc(write?.nvmrc)
+const pkgTask = core.packageJson(write?.packageJson)
+const renovateTask = core.renovateJson(write?.renovateJson)
 const baseTasks = [nvmTask, pkgTask, renovateTask].filter(Boolean)
 
 if (isCheck) {
