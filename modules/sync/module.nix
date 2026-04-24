@@ -52,6 +52,7 @@
 
             config = mkIf config.sync.enable (let
                 nestedSections = lib.filterAttrs (_: lib.isAttrs) config.sync.packageJson;
+                topLevelStrings = lib.filterAttrs (_: lib.isString) config.sync.packageJson;
 
                 disableRules =
                     optional (config.sync.nvmrc != null) {
@@ -59,6 +60,11 @@
                         matchManagers = ["nvm"];
                         enabled = false;
                     }
+                    ++ lib.mapAttrsToList (field: _: {
+                        description = "syncix manages ${field} in package.json";
+                        matchDepTypes = [field];
+                        enabled = false;
+                    }) topLevelStrings
                     ++ optional (nestedSections ? engines) {
                         description = "syncix manages engines field in package.json";
                         matchDepTypes = ["engines"];
