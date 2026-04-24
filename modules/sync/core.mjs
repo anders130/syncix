@@ -77,11 +77,12 @@ export const renovateJson = (config) => {
     const renovate = JSON.parse(fs.readFileSync('renovate.json', 'utf8'))
     const existingRules = renovate.packageRules ?? []
 
-    const userRules = existingRules.filter((r) => !r._syncix)
-    const syncixRules = packageRules.map((r) => ({ _syncix: true, ...r }))
+    const isSyncix = (r) => r.description?.startsWith('syncix:')
+    const userRules = existingRules.filter((r) => !isSyncix(r))
+    const syncixRules = packageRules
     const newRules = [...syncixRules, ...userRules]
 
-    const oldSyncixRules = existingRules.filter((r) => r._syncix)
+    const oldSyncixRules = existingRules.filter(isSyncix)
     const changed =
         JSON.stringify(oldSyncixRules) !== JSON.stringify(syncixRules)
 

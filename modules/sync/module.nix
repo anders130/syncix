@@ -23,22 +23,22 @@
                 topLevelStrings = lib.filterAttrs (_: lib.isString) write.packageJson;
             in
                 optional (write.nvmrc != null) {
-                    description = "syncix manages .nvmrc";
+                    description = "syncix: manages .nvmrc";
                     matchManagers = ["nvm"];
                     enabled = false;
                 }
                 ++ lib.mapAttrsToList (field: _: {
-                    description = "syncix manages ${field} in package.json";
+                    description = "syncix: manages ${field} in package.json";
                     matchDepTypes = [field];
                     enabled = false;
                 }) topLevelStrings
                 ++ optional (nestedSections ? engines) {
-                    description = "syncix manages engines field in package.json";
+                    description = "syncix: manages engines field in package.json";
                     matchDepTypes = ["engines"];
                     enabled = false;
                 }
                 ++ lib.mapAttrsToList (pkg: _: {
-                    description = "syncix manages ${pkg}";
+                    description = "syncix: manages ${pkg}";
                     matchPackageNames = [pkg];
                     enabled = false;
                 }) (nestedSections.devDependencies or {});
