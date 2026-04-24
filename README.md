@@ -1,41 +1,76 @@
 # syncix
 
-Sync version values from Nix into project files.
+Sync versions from Nix into project files.
 
-## What it does
+## Installation
 
-- Uses Nix as the single source of truth for versions.
-- Writes a version to `.nvmrc` when enabled.
-- Writes fields into `package.json` when configured.
+Add syncix as an input and wire up the shared inputs:
+
+```nix
+inputs = {
+  syncix = {
+    url = "github:anders130/syncix";
+    inputs = {
+      flake-parts.follows = "flake-parts";
+      import-tree.follows = "import-tree";
+      nixpkgs.follows = "nixpkgs";
+    };
+  };
+};
+```
+
+Then import the module in your sync config file:
+
+```nix
+{inputs, ...}: {
+  imports = [inputs.syncix.flakeModules.sync];
+  perSystem = {config, ...}: {
+    sync = { ... };
+  };
+}
+```
 
 ## Usage
-
-1. Add this flake as an input and import the module.
-2. Configure `sync` options in your flake.
-3. Run the sync package.
-
-Example config:
 
 ```nix
 {
   sync = {
     enable = true;
-    versions.node = pkgs.nodejs.version;
-    nvmrc = config.sync.versions.node;
-    packageJson = {
-      engines.node = config.sync.versions.node;
-      devDependencies."@types/node" =
-        "^${lib.versions.major config.sync.versions.node}";
+
+    versions = {
+      node = pkgs.nodejs.version;
+      pnpm = pkgs.pnpm.version;
     };
-    commands."pnpm-lock.yaml" = ["pnpm" "install" "--lockfile-only" "--silent"];
+
+    write = {
+      nvmrc = config.sync.versions.node;
+      packageJson = {
+        engines.node = config.sync.versions.node;
+        packageManager = "pnpm@${config.sync.versions.pnpm}";
+        devDependencies."@types/node" =
+          "^${lib.versions.major config.sync.versions.node}";
+      };
+      renovateJson = true;
+    };
+
+    generate."pnpm-lock.yaml" = ["pnpm" "install" "--lockfile-only" "--silent"];
+    format = ["pnpm" "exec" "prettier" "--write" "--ignore-unknown"];
   };
 }
 ```
 
-The `commands` option allows providing a map of files to commands that should run after `package.json` is updated to ensure their consistency.
-
-Run:
-
 ```sh
 nix run .#sync
+nix run .#sync -- --check
 ```
+
+## Options
+
+| Option               | Description                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `versions`           | Named version values                                                                                        |
+| `write.nvmrc`        | Value to write to `.nvmrc`                                                                                  |
+| `write.packageJson`  | Top-level strings set the field directly; nested attrsets merge into that section                           |
+| `write.renovateJson` | `true` or `{ packageRules = [...]; }` — auto-generates Renovate disable rules and a `postUpgradeTasks` rule |
+| `generate`           | Commands that produce files, keyed by output filename; run after `write`                                    |
+| `format`             | Formatter run after each write; filename appended as last argument                                          |
