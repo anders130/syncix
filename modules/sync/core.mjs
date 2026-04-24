@@ -70,6 +70,39 @@ export const packageJson = (config) => {
     }
 }
 
+export const renovateJson = (config) => {
+    const { packageRules = [] } = config ?? {}
+    if (!packageRules.length || !fs.existsSync('renovate.json')) return null
+
+    const renovate = JSON.parse(fs.readFileSync('renovate.json', 'utf8'))
+    const existingRules = renovate.packageRules ?? []
+
+    const userRules = existingRules.filter((r) => !r._syncix)
+    const syncixRules = packageRules.map((r) => ({ _syncix: true, ...r }))
+    const newRules = [...syncixRules, ...userRules]
+
+    const oldSyncixRules = existingRules.filter((r) => r._syncix)
+    const changed =
+        JSON.stringify(oldSyncixRules) !== JSON.stringify(syncixRules)
+
+    if (!changed) return { name: 'renovate.json', changed: false }
+
+    const preview = () =>
+        JSON.stringify({ ...renovate, packageRules: newRules }, null, 2) + '\n'
+
+    return {
+        name: 'renovate.json',
+        changed: true,
+        preview,
+        apply: () => fs.writeFileSync('renovate.json', preview()),
+        log: () =>
+            logUpdate(
+                'renovate.json',
+                syncixRules.map((r) => change('rule', r.description ?? '?')),
+            ),
+    }
+}
+
 export const command = (
     file,
     cmd,
