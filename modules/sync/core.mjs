@@ -2,48 +2,42 @@ import fs from 'fs'
 import { spawnSync } from 'child_process'
 import { logUpdate, change } from './ui.mjs'
 
-export const nvmrc = (val) => {
+export const text = (file) => (val) => {
     if (val == null) return null
-
-    const cur = fs.existsSync('.nvmrc')
-        ? fs.readFileSync('.nvmrc', 'utf8').trim()
-        : ''
-
-    if (cur === val) return { name: '.nvmrc', changed: false }
-
+    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : ''
+    if (cur === val) return { name: file, changed: false }
     return {
-        name: '.nvmrc',
+        name: file,
         changed: true,
-        apply: () => fs.writeFileSync('.nvmrc', `${val}\n`),
-        log: () => logUpdate('.nvmrc', [change('node', val)]),
+        apply: () => fs.writeFileSync(file, `${val}\n`),
+        log: () => logUpdate(file, [change('value', val)]),
     }
 }
 
-export const packageJson = (config) => {
-    if (
-        !config ||
-        !Object.keys(config).length ||
-        !fs.existsSync('package.json')
-    )
+export const jsonPatch = (file) => (config) => {
+    if (!config || !Object.keys(config).length || !fs.existsSync(file))
         return null
 
-    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+    const doc = JSON.parse(fs.readFileSync(file, 'utf8'))
+
+    const isAtomic = (v) =>
+        typeof v !== 'object' || v === null || Array.isArray(v)
 
     const diffs = Object.entries(config).flatMap(([section, fields]) => {
-        if (typeof fields === 'string') {
-            return pkg[section] !== fields
+        if (isAtomic(fields)) {
+            return JSON.stringify(doc[section]) !== JSON.stringify(fields)
                 ? [{ section, key: null, val: fields }]
                 : []
         }
         return Object.entries(fields)
-            .filter(([key, val]) => (pkg[section] ?? {})[key] !== val)
+            .filter(([key, val]) => (doc[section] ?? {})[key] !== val)
             .map(([key, val]) => ({ section, key, val }))
     })
 
-    if (!diffs.length) return { name: 'package.json', changed: false }
+    if (!diffs.length) return { name: file, changed: false }
 
     const preview = () => {
-        const next = JSON.parse(JSON.stringify(pkg))
+        const next = JSON.parse(JSON.stringify(doc))
         diffs.forEach(({ section, key, val }) => {
             if (key === null) {
                 next[section] = val
@@ -56,13 +50,13 @@ export const packageJson = (config) => {
     }
 
     return {
-        name: 'package.json',
+        name: file,
         changed: true,
         preview,
-        apply: () => fs.writeFileSync('package.json', preview()),
+        apply: () => fs.writeFileSync(file, preview()),
         log: () =>
             logUpdate(
-                'package.json',
+                file,
                 diffs.map(({ section, key, val }) =>
                     change(key ?? section, val),
                 ),
@@ -71,37 +65,34 @@ export const packageJson = (config) => {
 }
 
 export const renovateJson = (config) => {
-    const { packageRules = [] } = config ?? {}
-    if (!packageRules.length || !fs.existsSync('renovate.json')) return null
+    const { packageRules: syncixRules = [] } = config ?? {}
+    if (!syncixRules.length || !fs.existsSync('renovate.json')) return null
 
-    const renovate = JSON.parse(fs.readFileSync('renovate.json', 'utf8'))
-    const existingRules = renovate.packageRules ?? []
-
+    const existing = JSON.parse(fs.readFileSync('renovate.json', 'utf8'))
     const isSyncix = (r) => r.description?.startsWith('syncix:')
-    const userRules = existingRules.filter((r) => !isSyncix(r))
-    const syncixRules = packageRules
-    const newRules = [...syncixRules, ...userRules]
+    const oldSyncixRules = (existing.packageRules ?? []).filter(isSyncix)
 
-    const oldSyncixRules = existingRules.filter(isSyncix)
-    const changed =
-        JSON.stringify(oldSyncixRules) !== JSON.stringify(syncixRules)
+    if (JSON.stringify(oldSyncixRules) === JSON.stringify(syncixRules))
+        return { name: 'renovate.json', changed: false }
 
-    if (!changed) return { name: 'renovate.json', changed: false }
-
-    const preview = () =>
-        JSON.stringify({ ...renovate, packageRules: newRules }, null, 2) + '\n'
-
+    const userRules = (existing.packageRules ?? []).filter((r) => !isSyncix(r))
+    const task = jsonPatch('renovate.json')({
+        packageRules: [...syncixRules, ...userRules],
+    })
     return {
-        name: 'renovate.json',
-        changed: true,
-        preview,
-        apply: () => fs.writeFileSync('renovate.json', preview()),
+        ...task,
         log: () =>
             logUpdate(
                 'renovate.json',
                 syncixRules.map((r) => change('rule', r.description ?? '?')),
             ),
     }
+}
+
+export const writeHandlers = {
+    '.nvmrc': text('.nvmrc'),
+    'package.json': jsonPatch('package.json'),
+    'renovate.json': renovateJson,
 }
 
 export const command = (

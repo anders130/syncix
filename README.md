@@ -43,14 +43,14 @@ Then import the module in your sync config file:
     };
 
     write = {
-      nvmrc = config.sync.versions.node;
-      packageJson = {
+      ".nvmrc" = config.sync.versions.node;
+      "package.json" = {
         engines.node = config.sync.versions.node;
         packageManager = "pnpm@${config.sync.versions.pnpm}";
         devDependencies."@types/node" =
           "^${lib.versions.major config.sync.versions.node}";
       };
-      renovateJson = true;
+      "renovate.json" = true;
     };
 
     generate."pnpm-lock.yaml" = ["pnpm" "install" "--lockfile-only" "--silent"];
@@ -66,11 +66,11 @@ nix run .#sync -- --check
 
 ## Options
 
-| Option               | Description                                                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `versions`           | Named version values                                                                                        |
-| `write.nvmrc`        | Value to write to `.nvmrc`                                                                                  |
-| `write.packageJson`  | Top-level strings set the field directly; nested attrsets merge into that section                           |
-| `write.renovateJson` | `true` or `{ packageRules = [...]; }` — auto-generates Renovate disable rules and a `postUpgradeTasks` rule |
-| `generate`           | Commands that produce files, keyed by output filename; run after `write`                                    |
-| `format`             | Formatter run after each write; filename appended as last argument                                          |
+| Option                  | Description                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `versions`              | Named version values                                                                                        |
+| `write.".nvmrc"`        | Value to write to `.nvmrc`                                                                                  |
+| `write."package.json"`  | Top-level strings set the field directly; nested attrsets merge into that section                           |
+| `write."renovate.json"` | `true` or `{ packageRules = [...]; }` — auto-generates Renovate disable rules and a `postUpgradeTasks` rule |
+| `generate`              | Commands that produce files, keyed by output filename; run after `write`                                    |
+| `format`                | Formatter run after each write; filename appended as last argument                                          |

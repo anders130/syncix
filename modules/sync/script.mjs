@@ -12,12 +12,12 @@ logHeader(
     Object.entries(versions ?? {}).map(([k, v]) => `${k} ${v}`),
 )
 
-const nvmTask = core.nvmrc(write?.nvmrc)
-const pkgTask = core.packageJson(write?.packageJson)
-const renovateTask = core.renovateJson(write?.renovateJson)
-const baseTasks = [nvmTask, pkgTask, renovateTask].filter(Boolean)
+const baseTasks = Object.entries(write ?? {})
+    .map(([file, val]) => core.writeHandlers[file]?.(val))
+    .filter(Boolean)
 
 if (isCheck) {
+    const pkgTask = baseTasks.find((t) => t.name === 'package.json')
     const pkgPreview = pkgTask?.changed ? pkgTask.preview() : null
     const cmdTasks = cmds.map(([file, cmd]) =>
         core.command(file, cmd, { isCheck, pkgPreview }),
