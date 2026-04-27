@@ -1,5 +1,5 @@
-{lib, ...}: {
-    flake.flakeModules.sync = {
+{lib, ...}: let
+    sync = {
         perSystem = {
             config,
             pkgs,
@@ -173,5 +173,10 @@
                 };
             };
         };
+    };
+in {
+    flake.flakeModules = {
+        inherit sync;
+        default = {};
     };
 }
