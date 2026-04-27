@@ -21,27 +21,30 @@
             mkDisableRules = write: let
                 nestedSections = lib.filterAttrs (_: lib.isAttrs) write.packageJson;
                 topLevelStrings = lib.filterAttrs (_: lib.isString) write.packageJson;
+                depSections = lib.filterAttrs (k: _: k != "engines") nestedSections;
+                allPkgs = lib.concatMap lib.attrNames (lib.attrValues depSections);
+                depTypeFields = lib.attrNames topLevelStrings;
             in
                 optional (write.nvmrc != null) {
                     description = "syncix: manages .nvmrc";
                     matchManagers = ["nvm"];
                     enabled = false;
                 }
-                ++ lib.mapAttrsToList (field: _: {
-                    description = "syncix: manages ${field} in package.json";
-                    matchDepTypes = [field];
+                ++ optional (depTypeFields != []) {
+                    description = "syncix: manages top-level fields in package.json";
+                    matchDepTypes = depTypeFields;
                     enabled = false;
-                }) topLevelStrings
+                }
                 ++ optional (nestedSections ? engines) {
                     description = "syncix: manages engines field in package.json";
                     matchDepTypes = ["engines"];
                     enabled = false;
                 }
-                ++ lib.mapAttrsToList (pkg: _: {
-                    description = "syncix: manages ${pkg}";
-                    matchPackageNames = [pkg];
+                ++ optional (allPkgs != []) {
+                    description = "syncix: manages packages in package.json";
+                    matchPackageNames = allPkgs;
                     enabled = false;
-                }) (nestedSections.devDependencies or {});
+                };
 
             mkManagedFiles = write: generate:
                 optional (write.nvmrc != null) ".nvmrc"
