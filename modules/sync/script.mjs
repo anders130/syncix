@@ -1,6 +1,7 @@
 import { spawnSync } from 'child_process'
 import { logHeader, logOk, flush } from './ui.mjs'
-import * as core from './core.mjs'
+import { writeHandlers } from './write.mjs'
+import { command } from './generate.mjs'
 
 const { versions, write, generate, format } = JSON.parse(process.argv[2])
 const isCheck = process.argv.includes('--check')
@@ -13,14 +14,14 @@ logHeader(
 )
 
 const baseTasks = Object.entries(write ?? {})
-    .map(([file, val]) => core.writeHandlers[file]?.(val))
+    .map(([file, val]) => writeHandlers[file]?.(val))
     .filter(Boolean)
 
 if (isCheck) {
     const pkgTask = baseTasks.find((t) => t.name === 'package.json')
     const pkgPreview = pkgTask?.changed ? pkgTask.preview() : null
     const cmdTasks = cmds.map(([file, cmd]) =>
-        core.command(file, cmd, { isCheck, pkgPreview }),
+        command(file, cmd, { isCheck, pkgPreview }),
     )
     const allTasks = [...baseTasks, ...cmdTasks]
     allTasks.forEach((t) => (t.changed ? t.log() : logOk(t.name)))
@@ -28,7 +29,6 @@ if (isCheck) {
     process.exit(allTasks.some((t) => t.changed) ? 1 : 0)
 }
 
-// apply base tasks first so commands run against updated state
 baseTasks.forEach((t) => {
     if (!t.changed) return logOk(t.name)
     try {
@@ -44,7 +44,7 @@ baseTasks.forEach((t) => {
 })
 
 cmds.forEach(([file, cmd]) => {
-    const t = core.command(file, cmd)
+    const t = command(file, cmd)
     if (!t.changed) return logOk(t.name)
     t.log()
 })
