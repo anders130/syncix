@@ -1,5 +1,11 @@
 import fs from 'fs'
 import { logUpdate, change } from './ui.mjs'
+import {
+    parse as parseYaml,
+    deepMerge,
+    differs,
+    serialize as serializeYaml,
+} from './yaml.mjs'
 
 export const text = (file) => (val) => {
     if (val == null) return null
@@ -88,8 +94,26 @@ export const renovateJson = (config) => {
     }
 }
 
+export const yamlPatch = (file) => (patch) => {
+    if (!patch || !Object.keys(patch).length) return null
+    const existing = fs.existsSync(file)
+        ? parseYaml(fs.readFileSync(file, 'utf8'))
+        : {}
+    if (!differs(existing, patch)) return { name: file, changed: false }
+    const merged = deepMerge(existing, patch)
+    const content = serializeYaml(merged) + '\n'
+    return {
+        name: file,
+        changed: true,
+        apply: () => fs.writeFileSync(file, content),
+        log: () => logUpdate(file, [change('patch', file)]),
+        preview: () => content,
+    }
+}
+
 export const writeHandlers = {
     '.nvmrc': text('.nvmrc'),
     'package.json': jsonPatch('package.json'),
     'renovate.json': renovateJson,
+    'lefthook.yml': yamlPatch('lefthook.yml'),
 }

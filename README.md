@@ -51,6 +51,7 @@ Then import the module in your sync config file:
           "^${lib.versions.major config.sync.versions.node}";
       };
       "renovate.json" = true;
+      "lefthook.yml" = true;
     };
 
     generate."pnpm-lock.yaml" = ["pnpm" "install" "--lockfile-only" "--silent"];
@@ -66,11 +67,12 @@ nix run .#sync -- --check
 
 ## Options
 
-| Option                  | Description                                                                                                 |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `versions`              | Named version values                                                                                        |
-| `write.".nvmrc"`        | Value to write to `.nvmrc`                                                                                  |
-| `write."package.json"`  | Top-level strings set the field directly; nested attrsets merge into that section                           |
-| `write."renovate.json"` | `true` or `{ packageRules = [...]; }` — auto-generates Renovate disable rules and a `postUpgradeTasks` rule |
-| `generate`              | Commands that produce files, keyed by output filename; run after `write`                                    |
-| `format`                | Formatter run after each write; filename appended as last argument                                          |
+| Option                  | Description                                                                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `versions`              | Named version values                                                                                                                                                         |
+| `write.".nvmrc"`        | Value to write to `.nvmrc`                                                                                                                                                   |
+| `write."package.json"`  | Top-level strings set the field directly; nested attrsets merge into that section                                                                                            |
+| `write."renovate.json"` | `true` or `{ packageRules = [...]; }` — auto-generates Renovate disable rules and a `postUpgradeTasks` rule                                                                  |
+| `write."lefthook.yml"`  | `true` or `{ extraGlobs = [...]; }` — patches lefthook.yml with a pre-commit `nix run .#sync -- --check` command; glob auto-generated from managed files and `generate` keys |
+| `generate`              | Commands that produce files, keyed by output filename; run after `write`                                                                                                     |
+| `format`                | Formatter run after each write; filename appended as last argument                                                                                                           |

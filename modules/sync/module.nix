@@ -9,7 +9,13 @@ let
             inherit (lib) mkEnableOption mkIf mkOption types;
             handlers = import ./_handlers.nix {inherit lib;};
             renovate = import ./_renovate.nix {inherit lib;};
-            writeHandlers = handlers.writeHandlers // {"renovate.json" = renovate.handler;};
+            lefthook = import ./_lefthook.nix {inherit lib;};
+            writeHandlers =
+                handlers.writeHandlers
+                // {
+                    "renovate.json" = renovate.handler;
+                    "lefthook.yml" = lefthook.handler;
+                };
         in {
             options.sync = {
                 enable = mkEnableOption "nix sync";
@@ -61,7 +67,8 @@ let
                             generate = config.sync.generate;
                             write = {
                                 inherit (w) ".nvmrc" "package.json";
-                                "renovate.json".packageRules = renovate.mkRenovatePackageRules writeHandlers w config.sync.generate;
+                                "renovate.json".packageRules = renovate.mkRenovatePackageRules (builtins.removeAttrs writeHandlers ["lefthook.yml"]) w config.sync.generate;
+                                "lefthook.yml" = lefthook.mkConfig writeHandlers w config.sync.generate;
                             };
                         }}' "$@"
                     '';
