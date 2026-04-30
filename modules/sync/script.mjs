@@ -1,6 +1,6 @@
 import { spawnSync } from 'child_process'
 import { logHeader, logOk, flush } from './ui.mjs'
-import { writeHandlers } from './write.mjs'
+import { writeHandlers } from './handlers.mjs'
 import { command } from './generate.mjs'
 
 const { versions, write, generate, format } = JSON.parse(process.argv[2])

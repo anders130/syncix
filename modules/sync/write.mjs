@@ -69,31 +69,6 @@ export const jsonPatch = (file) => (config) => {
     }
 }
 
-export const renovateJson = (file) => (config) => {
-    const { packageRules: syncixRules = [] } = config ?? {}
-    if (!syncixRules.length || !fs.existsSync(file)) return null
-
-    const existing = JSON.parse(fs.readFileSync(file, 'utf8'))
-    const isSyncix = (r) => r.description?.startsWith('syncix:')
-    const oldSyncixRules = (existing.packageRules ?? []).filter(isSyncix)
-
-    if (JSON.stringify(oldSyncixRules) === JSON.stringify(syncixRules))
-        return { name: file, changed: false }
-
-    const userRules = (existing.packageRules ?? []).filter((r) => !isSyncix(r))
-    const task = jsonPatch(file)({
-        packageRules: [...syncixRules, ...userRules],
-    })
-    return {
-        ...task,
-        log: () =>
-            logUpdate(
-                file,
-                syncixRules.map((r) => change('rule', r.description ?? '?')),
-            ),
-    }
-}
-
 export const yamlPatch = (file) => (patch) => {
     if (!patch || !Object.keys(patch).length) return null
     const existing = fs.existsSync(file)
@@ -114,6 +89,4 @@ export const yamlPatch = (file) => (patch) => {
 export const writeHandlers = {
     '.nvmrc': text('.nvmrc'),
     'package.json': jsonPatch('package.json'),
-    'renovate.json': renovateJson('renovate.json'),
-    'lefthook.yml': yamlPatch('lefthook.yml'),
 }
